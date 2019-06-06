@@ -25,6 +25,7 @@
 package com.msemu.renx;
 
 import com.msemu.renx.nodes.NXNode;
+import com.msemu.renx.nodes.NXStringNode;
 import lombok.Getter;
 
 import java.io.IOException;
@@ -121,5 +122,15 @@ public class NXFile implements AutoCloseable, INXObject {
 
     public NXNode getBaseNode() {
         return this.getNode(0);
+    }
+
+    public NXNode<?> resolvePath(String path) {
+        String[] elements = (path.startsWith("/") ? path.substring(1) : path).split("[/\\\\]");
+        NXNode node = this.getBaseNode();
+        for (String element : elements) {
+            if (!element.equals("."))
+                node = node.getChild(element);
+        }
+        return node;
     }
 }

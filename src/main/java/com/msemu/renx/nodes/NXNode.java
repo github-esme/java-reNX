@@ -39,7 +39,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-public abstract class NXNode<T> implements Iterable<NXNode>, INXObject {
+public abstract class NXNode<T> implements Iterable<NXNode<?>>, INXObject {
 
     @Getter(AccessLevel.PUBLIC)
     @Setter(AccessLevel.PUBLIC)
@@ -66,7 +66,7 @@ public abstract class NXNode<T> implements Iterable<NXNode>, INXObject {
     private NXFile nxFile;
 
     @Getter(AccessLevel.PROTECTED)
-    private final Map<String, NXNode> childNodes;
+    private final Map<String, NXNode<?>> childNodes;
 
     @Getter(AccessLevel.PROTECTED)
     @Setter(AccessLevel.PROTECTED)
@@ -138,7 +138,7 @@ public abstract class NXNode<T> implements Iterable<NXNode>, INXObject {
     }
 
     @Override
-    public Iterator<NXNode> iterator() {
+    public Iterator<NXNode<?>> iterator() {
         if (!this.isParsed()) this.loadChildNodes();
         return this.getChildNodes().values().iterator();
     }
@@ -154,9 +154,14 @@ public abstract class NXNode<T> implements Iterable<NXNode>, INXObject {
         return this.getNxFile().getString(this.getNodeNameId());
     }
 
-    public NXNode getChild(String name) {
+
+    public NXNode<?> getChild(String name) {
+        return this.getChild(name, NXNode.class);
+    }
+
+    public <K extends NXNode<?>> K getChild(String name, Class<K> clazz) {
         if (!this.isParsed()) this.loadChildNodes();
-        return this.getChildNodes().getOrDefault(name, null);
+        return clazz.cast(this.getChildNodes().getOrDefault(name, null));
     }
 
     public abstract T getValue();
