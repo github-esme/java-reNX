@@ -41,6 +41,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class NXNode<T> implements Iterable<NXNode<?>>, INXObject {
 
+    public static final long SIZE = 52;
     @Getter(AccessLevel.PUBLIC)
     @Setter(AccessLevel.PUBLIC)
     protected long nodeDataOffset;
@@ -92,12 +93,11 @@ public abstract class NXNode<T> implements Iterable<NXNode<?>>, INXObject {
     }
 
     public static NXNode ParseNode(NXFile nxFile, long nodeDataOffset) {
-        MappedByteBuffer buffer;
+        MappedByteBuffer buffer = null;
         NXNode retNode = null;
         try {
-            buffer = nxFile.getMappedBuffer(nodeDataOffset);
+            buffer = nxFile.getMappedBuffer(nodeDataOffset, NXNode.SIZE);
             buffer.order(ByteOrder.LITTLE_ENDIAN);
-
             long nodeNameId = buffer.getInt();
             long firstChildId = buffer.getInt();
             short childCount = buffer.getShort();
@@ -112,12 +112,6 @@ public abstract class NXNode<T> implements Iterable<NXNode<?>>, INXObject {
                     break;
                 case DOUBLE:
                     retNode = new NXDoubleNode(nxFile, nodeDataOffset);
-                    break;
-                case BITMAP:
-                    retNode = new NXBitmapNode(nxFile, nodeDataOffset);
-                    break;
-                case AUDIO:
-                    retNode = new NXAudioNode(nxFile, nodeDataOffset);
                     break;
                 case NONE:
                 default:
@@ -154,17 +148,19 @@ public abstract class NXNode<T> implements Iterable<NXNode<?>>, INXObject {
         return this.getNxFile().getString(this.getNodeNameId());
     }
 
-
     public NXNode<?> getChild(String name) {
-        return this.getChild(name, NXNode.class);
+        if (!this.isParsed()) this.loadChildNodes();
+        return this.getChildNodes().getOrDefault(name, null);
     }
 
-    public <K extends NXNode<?>> K getChild(String name, Class<K> clazz) {
-        if (!this.isParsed()) this.loadChildNodes();
-        return clazz.cast(this.getChildNodes().getOrDefault(name, null));
+    public boolean hasChild(String name) {
+        NXNode<?> node = this.getChild(name);
+        boolean result =  node != null;
+        return result;
     }
 
     public abstract T getValue();
+
 
     protected T getValueWithLock(ILoadValueTask<T> task) {
         this.getLock().lock();
@@ -186,5 +182,19 @@ public abstract class NXNode<T> implements Iterable<NXNode<?>>, INXObject {
         this.setParsed(true);
     }
 
+    public NXNode<?> resolvePath(String path) {
+        String[] elements = (path.startsWith("/") ? path.substring(1) : path).split("[/\\\\]");
+        NXNode node = this;
+        for (String element : elements) {
+            if (!element.equals("."))
+                node = node.getChild(element);
+        }
+        return node;
+    }
+
+    @Override
+    public String toString() {
+        return this.getName();
+    }
 
 }

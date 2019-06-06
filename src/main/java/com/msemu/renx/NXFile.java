@@ -25,11 +25,11 @@
 package com.msemu.renx;
 
 import com.msemu.renx.nodes.NXNode;
-import com.msemu.renx.nodes.NXStringNode;
 import lombok.Getter;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -61,15 +61,22 @@ public class NXFile implements AutoCloseable, INXObject {
         this.parse();
     }
 
-    public MappedByteBuffer getMappedBuffer(long offset) throws IOException {
+    public MappedByteBuffer getMappedBuffer(long position, long size) throws IOException {
         FileChannel fc = this.getNxFile().getChannel();
-        MappedByteBuffer buffer = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-        buffer.position((int) offset);
+        MappedByteBuffer buffer;
+        try {
+            buffer = fc.map(FileChannel.MapMode.READ_ONLY, position, size);
+
+        } catch (IOException ex) {
+            System.gc();
+            System.runFinalization();
+            buffer = fc.map(FileChannel.MapMode.READ_ONLY, position, size);
+        }
         return buffer;
     }
 
     public void parse() throws IOException {
-        MappedByteBuffer buffer = this.getMappedBuffer(0);
+        MappedByteBuffer buffer = this.getMappedBuffer(0, NXHeader.SIZE);
         this.getNxHeader().parse(buffer);
     }
 
@@ -95,12 +102,14 @@ public class NXFile implements AutoCloseable, INXObject {
         long tableOffset = this.getNxHeader().getStringTableOffset() + id * 8;
         String text = "";
         try {
-            MappedByteBuffer buffer = this.getMappedBuffer(0);
+            MappedByteBuffer buffer = this.getMappedBuffer(tableOffset, 8);
             buffer.order(ByteOrder.LITTLE_ENDIAN);
-            buffer.position((int) tableOffset);
             long stringOffset = buffer.getLong();
-            buffer.position((int) stringOffset);
+            buffer = this.getMappedBuffer(stringOffset, 2);
+            buffer.order(ByteOrder.LITTLE_ENDIAN);
             int stringSize = buffer.getShort();
+            buffer = this.getMappedBuffer(stringOffset + 2, stringSize);
+            buffer.order(ByteOrder.LITTLE_ENDIAN);
             if (stringSize == 0) return "";
             byte[] data = new byte[stringSize];
             buffer.get(data);
@@ -133,4 +142,5 @@ public class NXFile implements AutoCloseable, INXObject {
         }
         return node;
     }
+
 }
