@@ -92,7 +92,7 @@ public abstract class NXNode<T> implements Iterable<NXNode>, INXObject {
     }
 
     public static NXNode ParseNode(NXFile nxFile, long nodeDataOffset) {
-        MappedByteBuffer buffer = null;
+        MappedByteBuffer buffer;
         NXNode retNode = null;
         try {
             buffer = nxFile.getMappedBuffer(nodeDataOffset);
@@ -104,7 +104,6 @@ public abstract class NXNode<T> implements Iterable<NXNode>, INXObject {
             short typeVal = buffer.getShort();
             NXNodeType type = NXNodeType.getByValue(typeVal);
             switch (type) {
-
                 case INT64:
                     retNode = new NXInt64Node(nxFile, nodeDataOffset);
                     break;
@@ -113,6 +112,12 @@ public abstract class NXNode<T> implements Iterable<NXNode>, INXObject {
                     break;
                 case DOUBLE:
                     retNode = new NXDoubleNode(nxFile, nodeDataOffset);
+                    break;
+                case BITMAP:
+                    retNode = new NXBitmapNode(nxFile, nodeDataOffset);
+                    break;
+                case AUDIO:
+                    retNode = new NXAudioNode(nxFile, nodeDataOffset);
                     break;
                 case NONE:
                 default:
