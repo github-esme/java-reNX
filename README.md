@@ -5,7 +5,7 @@ NXForamt Reader Written in Java
 See https://nxformat.github.io/
 
 
-### TODO List
+### TODO
 
 * The data inside Audio, Bitmap Nodes hasn't be parsed
 * NXReadSelection not working
